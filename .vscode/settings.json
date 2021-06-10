@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "Tracefile": "yaml",
+        "*.s": "platformio-debug.asm",
+        "config": "toml",
+        "*.board": "yaml",
+        "x.h": "c",
+        "string.h": "c",
+        "stivale2.h": "c",
+        "stdint.h": "c",
+        "stdlib.h": "c",
+        "assert.h": "c",
+        "stdarg.h": "c",
+        "stdio.h": "c",
+        "liballoc.h": "c",
+        "istream": "c",
+        "ostream": "c"
+    },
+    "typescript.tsdk": "node_modules/typescript/lib"
+}

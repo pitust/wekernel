@@ -42,6 +42,7 @@ export declare function putchar(addr: u8): void
 export function puts(s: string): void {
     putsnnl(s)
     putchar(<u8>'\n'.charCodeAt(0))
+    putchar(0)
 }
 
 export function putsnnl(s: string): void {

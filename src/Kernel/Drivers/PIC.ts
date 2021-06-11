@@ -1,17 +1,17 @@
 import { DriverBase } from '../Driver'
-import { outb, puts } from '../IO';
+import { outb } from '../IO'
 
-const PIC1: u16 = 0x20;
-const PIC2: u16 = 0xA0;
-const PIC1_COMMAND: u16 = PIC1;
-const PIC1_DATA: u16 = (PIC1 + 1);
-const PIC2_COMMAND: u16 = PIC2;
-const PIC2_DATA: u16 = (PIC2 + 1);
+const PIC1: u16 = 0x20
+const PIC2: u16 = 0xa0
+const PIC1_COMMAND: u16 = PIC1
+const PIC1_DATA: u16 = PIC1 + 1
+const PIC2_COMMAND: u16 = PIC2
+const PIC2_DATA: u16 = PIC2 + 1
 
-const ICW1_ICW4: u8 = 0x01;
-const ICW1_INIT: u8 = 0x10;
-const ICW4_8086: u8 = 0x01;
-const PIC_EOI: u8 = 0x20;
+const ICW1_ICW4: u8 = 0x01
+const ICW1_INIT: u8 = 0x10
+const ICW4_8086: u8 = 0x01
+const PIC_EOI: u8 = 0x20
 
 @Driver('x86.pic')
 @RDepends('target.bootup')

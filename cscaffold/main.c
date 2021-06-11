@@ -32,12 +32,12 @@ void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size) {
 	return dstptr;
 }
 u64 originallowhalf[256];
-char buffer[256];
-int bufidx = 0;
+char buffer[512];
+int bufidx = 0, flipflop = 0;
 void putc(char c) {
     if (termtag) {
         if (c) buffer[bufidx++] = c;
-        if (bufidx == 256 || c == '\n' || c == 0) {
+        if (bufidx == 512 || (c == '\n' && flipflop) || c == 0) {
             u64 tmpbuf[256];
 
             u64* cr3;
@@ -57,6 +57,7 @@ void putc(char c) {
             }
             tlbflush();
         }
+        if (c == '\n') flipflop = 1^flipflop;
     }
     outb(0xe9, c);
 }

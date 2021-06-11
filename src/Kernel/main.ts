@@ -8,6 +8,7 @@ import {
     loadGDT,
     loadIDT,
     malloc,
+    outb,
     page,
     peek64,
     peek8,
@@ -96,6 +97,6 @@ while (1) {
     setInt3HandlerTask(Int3Task.TASK_SWITCH_REGS)
     int3()
     const isr = peek8(getRegSwappedSlotAddr() + 0xb0)
-    puts('bump: ' + isr.toString())
+
     PIC.the().eoi(isr - 0x20)
 }

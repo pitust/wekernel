@@ -56,7 +56,7 @@ export abstract class DriverBase {
     }
 }
 
-@Driver("target.bootup")
+@Driver('target.bootup')
 class BootupTarget extends DriverBase {
     static the(): BootupTarget {
         return _implthe()

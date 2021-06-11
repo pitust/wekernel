@@ -10,23 +10,26 @@ import {
     malloc,
     outb,
     page,
+    panic,
     peek64,
     peek8,
     poke16,
     poke32,
     poke64,
     poke8,
+    ptr,
     puts,
     setInt3HandlerTask,
 } from './IO'
 
 import './Autogen/DriverImports'
 import { runDrivers } from './Driver'
-import { GDT_CODE64, initGDT } from './GDT'
+import { GDT_CODE64, GDT_USRC64, GDT_USRD64, initGDT } from './GDT'
 import { TAG_CMDLINE } from './Stivale2'
 import { parseCmdline } from './Cmdline'
 import { Regs } from './Sched/Regs'
 import { PIC } from './Drivers/PIC'
+import { ArrayBufferVMObject } from './Memory/VMObject'
 
 puts('[+] WeKernel: booting! please wait...')
 
@@ -81,22 +84,55 @@ while (tag) {
     tag = peek64(tag + 8)
 }
 
+function hptr(s: u64): string {
+    return `${s == 0 ? '' : '\x1b[0;1;31m'}0x${s.toString(16).padStart(16, '0')}\x1b[0m`
+}
+function prnint(isr: u64): string {
+    if (isr == 0x0e) return 'Page fault'.padEnd(18, ' ')
+    if (isr == 0x20) return 'Timer interrupt'.padEnd(18, ' ')
+    return `Unknown ISR ${isr.toString(16)}`.padEnd(18, ' ')
+}
+
 runDrivers()
 
-const mem = malloc(2)
+const code = new Uint8Array(4096)
+code[0] = 0x0f
+code[1] = 0x0b
+
+const vmo = new ArrayBufferVMObject(code.buffer)
+vmo.map(0, 0x800_0000)
 const stack = malloc(4096)
-poke16(mem, 0xfeeb)
 setInt3HandlerTask(Int3Task.TASK_SETUP_REGS)
 int3()
-const regs = Regs.fromMemory(getRegSwappedSlotAddr())
-regs.rip = mem
+const regs = new Regs()
+regs.rip = 0x800_0000
 regs.rsp = stack + 4096
-regs.flags |= /* IF */ 0x200
+regs.rflags |= /* IF */ 0x200
+regs.ss = GDT_USRD64 | 3
+regs.cs = GDT_USRC64 | 3
 regs.toMemory(getRegSwappedSlotAddr())
 while (1) {
     setInt3HandlerTask(Int3Task.TASK_SWITCH_REGS)
     int3()
-    const isr = peek8(getRegSwappedSlotAddr() + 0xb0)
-
-    PIC.the().eoi(isr - 0x20)
+    const isr = peek8(getRegSwappedSlotAddr() + 0xa8)
+    if (isr >= 0x20) {
+        PIC.the().eoi(isr - 0x20)
+    } else {
+        const r: Regs = Regs.fromMemory(getRegSwappedSlotAddr())
+        // if ((r.cs & 3) == 3) {
+            puts(' === Kernel panic: something fucked up badly! ===')
+            puts(`  RAX ${hptr(r.rax)}  RBX ${hptr(r.rbx)}`)
+            puts(`  RCX ${hptr(r.rcx)}  RDX ${hptr(r.rdx)}`)
+            puts(`  RDI ${hptr(r.rdi)}  RSI ${hptr(r.rsi)}`)
+            puts(`  RBP ${hptr(r.rbp)}  RSP ${hptr(r.rsp)}`)
+            puts(`  R8  ${hptr(r.r8)}  R9  ${hptr(r.r9)}`)
+            puts(`  R10 ${hptr(r.r10)}  R11 ${hptr(r.r11)}`)
+            puts(`  R12 ${hptr(r.r12)}  R13 ${hptr(r.r13)}`)
+            puts(`  R14 ${hptr(r.r14)}  R15 ${hptr(r.r15)}`)
+            puts(`  RIP ${hptr(r.rip)}  RFL ${hptr(r.rflags)}`)
+            puts(`  CS  ${hptr(r.cs)}  SS  ${hptr(r.ss)}`)
+            puts(`  INT \x1b[0;1;32m${prnint(isr)}\x1b[0m  ERR ${hptr(r.error)}`)
+            while (1) {}
+        // }
+    }
 }

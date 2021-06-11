@@ -35,30 +35,30 @@ u64 originallowhalf[256];
 char buffer[512];
 int bufidx = 0, flipflop = 0;
 void putc(char c) {
-    if (termtag) {
-        if (c) buffer[bufidx++] = c;
-        if (bufidx == 512 || (c == '\n' && flipflop) || c == 0) {
-            u64 tmpbuf[256];
+    // if (termtag) {
+    //     if (c) buffer[bufidx++] = c;
+    //     if (bufidx == 512 || (c == '\n' && flipflop) || c == 0) {
+    //         u64 tmpbuf[256];
 
-            u64* cr3;
-            asm volatile("mov %%cr3, %0" : "=r"(cr3));
-            cr3 = (u64*)(0xffff800000000000 + (u64)cr3);
-            for (int i = 0;i < 256;i++) {
-                tmpbuf[i] = cr3[i];
-                cr3[i] = originallowhalf[i];
-            }
-            tlbflush();
+    //         u64* cr3;
+    //         asm volatile("mov %%cr3, %0" : "=r"(cr3));
+    //         cr3 = (u64*)(0xffff800000000000 + (u64)cr3);
+    //         for (int i = 0;i < 256;i++) {
+    //             tmpbuf[i] = cr3[i];
+    //             cr3[i] = originallowhalf[i];
+    //         }
+    //         tlbflush();
 
-            ((void(*)(char* s, int l))termtag->term_write)(buffer, bufidx);
-            bufidx = 0;
+    //         ((void(*)(char* s, int l))termtag->term_write)(buffer, bufidx);
+    //         bufidx = 0;
 
-            for (int i = 0;i < 256;i++) {
-                cr3[i] = tmpbuf[i];
-            }
-            tlbflush();
-        }
-        if (c == '\n') flipflop = 1^flipflop;
-    }
+    //         for (int i = 0;i < 256;i++) {
+    //             cr3[i] = tmpbuf[i];
+    //         }
+    //         tlbflush();
+    //     }
+    //     if (c == '\n') flipflop = 1^flipflop;
+    // }
     outb(0xe9, c);
 }
 void puts(const char* s) {
@@ -224,7 +224,6 @@ static struct stivale2_header stivale_hdr = {
 struct stivale2_struct* gstruc;
 
 typedef struct {
-    u64 ds;
     u64 r15;
     u64 r14;
     u64 r13;
@@ -283,26 +282,6 @@ void do_isr_handle(u64 isr, regs_t* regs) {
     *regs = suspended_task.r;
     suspended_task.r = other;
 }
-
-void (*Z_envZ_abortZ_viiii)(u32, u32, u32, u32);
-void (*Z_indexZ_putcharZ_vi)(u32);
-u64 (*Z_indexZ_getStivale2HeaderZ_jv)(void);
-u32 (*Z_indexZ_peek8Z_ij)(u64);
-u32 (*Z_indexZ_peek16Z_ij)(u64);
-u32 (*Z_indexZ_peek32Z_ij)(u64);
-u64 (*Z_indexZ_peek64Z_jj)(u64);
-u64 (*Z_indexZ_mallocZ_jj)(u64);
-void (*Z_indexZ_poke8Z_vji)(u64, u32);
-void (*Z_indexZ_poke16Z_vji)(u64, u32);
-void (*Z_indexZ_poke32Z_vji)(u64, u32);
-void (*Z_indexZ_poke64Z_vjj)(u64, u64);
-void (*Z_indexZ_loadGDTZ_vj)(u64);
-void (*Z_indexZ_loadIDTZ_vj)(u64);
-u64 (*Z_indexZ_pageZ_jv)(void);
-void (*Z_indexZ_freeZ_vj)(u64);
-void (*Z_indexZ_setInt3HandlerTaskZ_vi)(u32);
-u64 (*Z_indexZ_getRegSwappedSlotAddrZ_jv)(void);
-void (*Z_indexZ_outbZ_vii)(u32, u32);
 
 void Z_envZ_abortZ_viiii_impl(u32 a, u32 b, u32 c, u32 d) {
     printk("abort()!");
@@ -365,6 +344,26 @@ void Z_indexZ_outbZ_vii_impl(u32 port, u32 val) {
     outb((u16)port, (u8)val);
 }
 
+void (*Z_envZ_abortZ_viiii)(u32, u32, u32, u32) = Z_envZ_abortZ_viiii_impl;
+void (*Z_indexZ_putcharZ_vi)(u32) = Z_indexZ_putcharZ_vi_impl;
+u64 (*Z_indexZ_getStivale2HeaderZ_jv)(void) = Z_indexZ_getStivale2HeaderZ_jv_impl;
+u32 (*Z_indexZ_peek8Z_ij)(u64) = Z_indexZ_peek8Z_ij_impl;
+u32 (*Z_indexZ_peek16Z_ij)(u64) = Z_indexZ_peek16Z_ij_impl;
+u32 (*Z_indexZ_peek32Z_ij)(u64) = Z_indexZ_peek32Z_ij_impl;
+u64 (*Z_indexZ_peek64Z_jj)(u64) = Z_indexZ_peek64Z_jj_impl;
+u64 (*Z_indexZ_mallocZ_jj)(u64) = Z_indexZ_mallocZ_jj_impl;
+void (*Z_indexZ_poke8Z_vji)(u64, u32) = Z_indexZ_poke8Z_vji_impl;
+void (*Z_indexZ_poke16Z_vji)(u64, u32) = Z_indexZ_poke16Z_vji_impl;
+void (*Z_indexZ_poke32Z_vji)(u64, u32) = Z_indexZ_poke32Z_vji_impl;
+void (*Z_indexZ_poke64Z_vjj)(u64, u64) = Z_indexZ_poke64Z_vjj_impl;
+void (*Z_indexZ_loadGDTZ_vj)(u64) = Z_indexZ_loadGDTZ_vj_impl;
+void (*Z_indexZ_loadIDTZ_vj)(u64) = Z_indexZ_loadIDTZ_vj_impl;
+u64 (*Z_indexZ_pageZ_jv)(void) = Z_indexZ_pageZ_jv_impl;
+void (*Z_indexZ_freeZ_vj)(u64) = Z_indexZ_freeZ_vj_impl;
+void (*Z_indexZ_setInt3HandlerTaskZ_vi)(u32) = Z_indexZ_setInt3HandlerTaskZ_vi_impl;
+u64 (*Z_indexZ_getRegSwappedSlotAddrZ_jv)(void) = Z_indexZ_getRegSwappedSlotAddrZ_jv_impl;
+void (*Z_indexZ_outbZ_vii)(u32, u32) = Z_indexZ_outbZ_vii_impl;
+
 void _start(struct stivale2_struct* struc) {
     
     u64* cr3;
@@ -397,26 +396,6 @@ void _start(struct stivale2_struct* struc) {
     }
 
 
-    
-    Z_envZ_abortZ_viiii = Z_envZ_abortZ_viiii_impl;
-    Z_indexZ_putcharZ_vi = Z_indexZ_putcharZ_vi_impl;
-    Z_indexZ_getStivale2HeaderZ_jv = Z_indexZ_getStivale2HeaderZ_jv_impl;
-    Z_indexZ_peek8Z_ij = Z_indexZ_peek8Z_ij_impl;
-    Z_indexZ_peek16Z_ij = Z_indexZ_peek16Z_ij_impl;
-    Z_indexZ_peek32Z_ij = Z_indexZ_peek32Z_ij_impl;
-    Z_indexZ_peek64Z_jj = Z_indexZ_peek64Z_jj_impl;
-    Z_indexZ_mallocZ_jj = Z_indexZ_mallocZ_jj_impl;
-    Z_indexZ_poke8Z_vji = Z_indexZ_poke8Z_vji_impl;
-    Z_indexZ_poke16Z_vji = Z_indexZ_poke16Z_vji_impl;
-    Z_indexZ_poke32Z_vji = Z_indexZ_poke32Z_vji_impl;
-    Z_indexZ_poke64Z_vjj = Z_indexZ_poke64Z_vjj_impl;
-    Z_indexZ_loadGDTZ_vj = Z_indexZ_loadGDTZ_vj_impl;
-    Z_indexZ_loadIDTZ_vj = Z_indexZ_loadIDTZ_vj_impl;
-    Z_indexZ_pageZ_jv = Z_indexZ_pageZ_jv_impl;
-    Z_indexZ_freeZ_vj = Z_indexZ_freeZ_vj_impl;
-    Z_indexZ_setInt3HandlerTaskZ_vi = Z_indexZ_setInt3HandlerTaskZ_vi_impl;
-    Z_indexZ_getRegSwappedSlotAddrZ_jv = Z_indexZ_getRegSwappedSlotAddrZ_jv_impl;
-    Z_indexZ_outbZ_vii = Z_indexZ_outbZ_vii_impl;
     init();
     while (1);
 }

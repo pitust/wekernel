@@ -25,7 +25,7 @@ export class Regs {
         public rsp: u64 = 0,
         public ss: u64 = 0
     ) {}
-    static fromMemory(addr: u64) {
+    static fromMemory(addr: u64): Regs {
         return new Regs(
             peek64(addr + 0x00),
             peek64(addr + 0x08),
@@ -51,7 +51,7 @@ export class Regs {
             peek64(addr + 0xa8)
         )
     }
-    toMemory(addr: u64) {
+    toMemory(addr: u64): void {
         poke64(addr + 0x00, this.ds)
         poke64(addr + 0x08, this.r15)
         poke64(addr + 0x10, this.r14)
@@ -77,4 +77,3 @@ export class Regs {
     }
 }
 
-int3()

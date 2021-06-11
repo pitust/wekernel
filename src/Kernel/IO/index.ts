@@ -20,6 +20,7 @@ export declare function loadGDT(ptr: u64): void
 export declare function loadIDT(ptr: u64): void
 
 export enum Int3Task {
+    TASK_NONE = 0,
     TASK_SETUP_REGS = 1,
     TASK_SWITCH_REGS = 2,
 }

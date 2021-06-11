@@ -11,6 +11,7 @@ extern do_isr_handle
 
 isr%1:
 %if (%1 >= 0x8 && %1 <= 0xE) || %1 == 0x11 || %1 == 0x1E
+%else
     push 0
 %endif
     push rbp
@@ -67,9 +68,7 @@ isr%1:
     pop rbx
     pop rax
     pop rbp
-%if (%1 >= 0x8 && %1 <= 0xE) || %1 == 0x11 || %1 == 0x1E
     add rsp, 8 ; error code
-%endif
     iretq
 
 %endmacro

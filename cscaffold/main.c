@@ -193,7 +193,7 @@ void liballoc_free(uint64_t* area, uint64_t pages) {
     theplace = area;
 }
 
-static uint8_t stack[16 * 1024];
+static uint8_t stack[128 * 1024];
 
 static struct stivale2_header_tag_terminal hdrtagterm = {
     .tag = {
@@ -222,6 +222,67 @@ static struct stivale2_header stivale_hdr = {
 
 struct stivale2_struct* gstruc;
 
+typedef struct {
+    u64 ds;
+    u64 r15;
+    u64 r14;
+    u64 r13;
+    u64 r12;
+    u64 r11;
+    u64 r10;
+    u64 r9;
+    u64 r8;
+    u64 rdi;
+    u64 rsi;
+    u64 rdx;
+    u64 rcx;
+    u64 rbx;
+    u64 rax;
+    u64 rbp;
+    u64 error;
+    u64 rip;
+    u64 cs;
+    u64 flags;
+    u64 rsp;
+    u64 ss;
+} regs_t;
+
+struct {
+    regs_t r;
+    u64 lastirq;
+} suspended_task;
+int mode = 0;
+
+void do_isr_handle(u64 isr, regs_t* regs) {
+    suspended_task.lastirq = isr;
+    if (!(regs->cs & 3) && isr == 3) {
+        // coming from kernel
+        if (mode == /* TASK_SETUP_REGS */ 1) {
+            suspended_task.r = *regs;
+            mode = 0;
+            return;
+        }
+        if (mode == /* TASK_SWITCH_REGS */ 2) {
+            regs_t other = *regs;
+            *regs = suspended_task.r;
+            suspended_task.r = other;
+            mode = 0;
+            return;
+        }
+        if (mode == 0) {
+            printk("Fatal: ISR 0x$hex! aborting...", isr);
+            while (1);
+        }
+    }
+    if (!(regs->cs & 3) && isr < 32) {
+        printk("Fatal: ISR 0x$hex! aborting...", isr);
+        while (1);
+    }
+    regs_t other = *regs;
+    *regs = suspended_task.r;
+    suspended_task.r = other;
+}
+
 void (*Z_envZ_abortZ_viiii)(u32, u32, u32, u32);
 void (*Z_indexZ_putcharZ_vi)(u32);
 u64 (*Z_indexZ_getStivale2HeaderZ_jv)(void);
@@ -238,6 +299,9 @@ void (*Z_indexZ_loadGDTZ_vj)(u64);
 void (*Z_indexZ_loadIDTZ_vj)(u64);
 u64 (*Z_indexZ_pageZ_jv)(void);
 void (*Z_indexZ_freeZ_vj)(u64);
+void (*Z_indexZ_setInt3HandlerTaskZ_vi)(u32);
+u64 (*Z_indexZ_getRegSwappedSlotAddrZ_jv)(void);
+void (*Z_indexZ_outbZ_vii)(u32, u32);
 
 void Z_envZ_abortZ_viiii_impl(u32 a, u32 b, u32 c, u32 d) {
     printk("abort()!");
@@ -290,35 +354,14 @@ u64 Z_indexZ_pageZ_jv_impl() {
 void Z_indexZ_freeZ_vj_impl(u64 addr){
     free((void*)addr);
 }
-
-typedef struct {
-    u64 ds;
-    u64 r15;
-    u64 r14;
-    u64 r13;
-    u64 r12;
-    u64 r11;
-    u64 r10;
-    u64 r9;
-    u64 r8;
-    u64 rdi;
-    u64 rsi;
-    u64 rdx;
-    u64 rcx;
-    u64 rbx;
-    u64 rax;
-    u64 rbp;
-    u64 error;
-    u64 rip;
-    u64 cs;
-    u64 flags;
-    u64 rsp;
-    u64 ss;
-} regs_t;
-
-void do_isr_handle(u64 isr, regs_t* regs) {
-    printk("TODO: do_isr_handle(0x$hex)...", isr);
-    while (1);
+void Z_indexZ_setInt3HandlerTaskZ_vi_impl(u32 task) {
+    mode = task;
+}
+u64 Z_indexZ_getRegSwappedSlotAddrZ_jv_impl() {
+    return (u64)&suspended_task;
+}
+void Z_indexZ_outbZ_vii_impl(u32 port, u32 val) {
+    outb((u16)port, (u8)val);
 }
 
 void _start(struct stivale2_struct* struc) {
@@ -370,6 +413,9 @@ void _start(struct stivale2_struct* struc) {
     Z_indexZ_loadIDTZ_vj = Z_indexZ_loadIDTZ_vj_impl;
     Z_indexZ_pageZ_jv = Z_indexZ_pageZ_jv_impl;
     Z_indexZ_freeZ_vj = Z_indexZ_freeZ_vj_impl;
+    Z_indexZ_setInt3HandlerTaskZ_vi = Z_indexZ_setInt3HandlerTaskZ_vi_impl;
+    Z_indexZ_getRegSwappedSlotAddrZ_jv = Z_indexZ_getRegSwappedSlotAddrZ_jv_impl;
+    Z_indexZ_outbZ_vii = Z_indexZ_outbZ_vii_impl;
     init();
     while (1);
 }

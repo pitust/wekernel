@@ -1,5 +1,5 @@
 import { DriverBase, driverUnload, fire, isDriverLoadedByID } from '../Driver'
-import { panic, peek32, peek64, peek8 } from '../IO'
+import { panic, peek32, peek64, peek8, puts } from '../IO'
 import { TAG_RSDP } from '../Stivale2'
 import { StivaleTags } from './StivaleTags'
 
@@ -7,7 +7,7 @@ import { StivaleTags } from './StivaleTags'
 @Depends('loader.stivale2')
 @Fires('target.rsdp')
 class Stivale2RSDP extends DriverBase {
-    rsdp: u64 = 0
+    private rsdp: u64 = 0
     constructor() {
         super()
         if (StivaleTags.the().has(TAG_RSDP)) {
@@ -40,7 +40,7 @@ export class RSDP extends DriverBase {
         while (1) {}
     }
     rsdt(): u64 {
-        return <u64>peek32(this.rsdp() + 16)
+        return 0xffff800000000000 + <u64>peek32(this.rsdp() + 16)
     }
     static the(): RSDP {
         return _implthe()
@@ -55,7 +55,7 @@ export class ACPITables extends DriverBase {
         super()
         const entcount = (peek32(RSDP.the().rsdt() + 4) - 36) / 4
         for (let i = <u32>0; i < entcount; i++) {
-            const addr = peek32(i * 4 + 36 + RSDP.the().rsdt())
+            const addr = 0xffff800000000000 + <u64>peek32(i * 4 + 36 + RSDP.the().rsdt())
             let s = String.fromCharCodes([peek8(addr + 0), peek8(addr + 1), peek8(addr + 2), peek8(addr + 3)])
             this.tables.set(s, addr)
         }

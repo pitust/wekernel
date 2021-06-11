@@ -56,6 +56,15 @@ export abstract class DriverBase {
     }
 }
 
+@Driver("target.bootup")
+class BootupTarget extends DriverBase {
+    static the(): BootupTarget {
+        return _implthe()
+    }
+    static getID(): u64 {
+        return _implthe()
+    }
+}
 class FakeDriver extends DriverBase {}
 
 let ifires: string[] = []
@@ -77,6 +86,11 @@ export function runDrivers(): void {
             const u = rdeps.values()
             for (let j = 0; j < u.length; j++) {
                 if (u[j].touse == v[i].name) v[i].deps.add(u[j].needed)
+            }
+            if (v[i].deps.size) {
+                notReadyDrivers.add(v[i])
+            } else {
+                pendingDrivers.add(v[i])
             }
         }
         if (printgraph) {
@@ -105,6 +119,7 @@ export function runDrivers(): void {
             for (let i = 0; i < v.length; i++) {
                 const driver = v[i]
                 ifires = []
+                puts('run ' + v[i].name)
                 const drvi = driver.create()
                 driverRegistry.add(drvi)
                 ids.set(driver.id, drvi)
@@ -136,12 +151,16 @@ export function runDrivers(): void {
     if (notReadyDrivers.size) {
         puts('[-] Warning: unable to initialise drivers:')
         const v = notReadyDrivers.values()
+        let fail = false
         for (let i = 0; i < v.length; i++) {
             puts(' - ' + v[i].name)
             const deps = v[i].deps.values()
             for (let i = 0; i < deps.length; i++) {
                 puts('  ' + (i == deps.length - 1 ? '\\' : '+') + '-- ' + deps[i])
             }
+            if (v[i].id == BootupTarget.getID()) fail = true
         }
+        if (fail) panic('Unable to boot up!')
     }
+    puts('done')
 }

@@ -1,5 +1,5 @@
 import { DriverBase } from '../Driver'
-import { getStivale2Header, panic, peek64 } from '../IO'
+import { getStivale2Header, panic, peek64, puts } from '../IO'
 import { lookupStivaleTag } from '../Stivale2'
 
 @Driver('loader.stivale2')

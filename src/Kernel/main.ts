@@ -1,7 +1,10 @@
 import {
     free,
     getisr,
+    getRegSwappedSlotAddr,
     getStivale2Header,
+    int3,
+    Int3Task,
     loadGDT,
     loadIDT,
     malloc,
@@ -13,6 +16,7 @@ import {
     poke64,
     poke8,
     puts,
+    setInt3HandlerTask,
 } from './IO'
 
 import './Autogen/DriverImports'
@@ -20,6 +24,8 @@ import { runDrivers } from './Driver'
 import { GDT_CODE64, initGDT } from './GDT'
 import { TAG_CMDLINE } from './Stivale2'
 import { parseCmdline } from './Cmdline'
+import { Regs } from './Sched/Regs'
+import { PIC } from './Drivers/PIC'
 
 puts('[+] WeKernel: booting! please wait...')
 
@@ -75,3 +81,21 @@ while (tag) {
 }
 
 runDrivers()
+
+const mem = malloc(2)
+const stack = malloc(4096)
+poke16(mem, 0xfeeb)
+setInt3HandlerTask(Int3Task.TASK_SETUP_REGS)
+int3()
+const regs = Regs.fromMemory(getRegSwappedSlotAddr())
+regs.rip = mem
+regs.rsp = stack + 4096
+regs.flags |= /* IF */ 0x200
+regs.toMemory(getRegSwappedSlotAddr())
+while (1) {
+    setInt3HandlerTask(Int3Task.TASK_SWITCH_REGS)
+    int3()
+    const isr = peek8(getRegSwappedSlotAddr() + 0xb0)
+    puts('bump: ' + isr.toString())
+    PIC.the().eoi(isr - 0x20)
+}
